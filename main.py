@@ -77,10 +77,11 @@ class Application:
             "third_card.csv",
             "exp.csv",
             "challenge.csv",
+            "skill.csv"
         ]
-        title_list = ["Происхождение", "Стремление", "Судьба", "Опыт", "Испытание"]
+        title_list = ["Происхождение", "Стремление", "Судьба", "Опыт", "Испытание", "Способность"]
         self.var_list = []
-        for i in range(5):
+        for i in range(len(title_list)):
             self.make_comboboxes(file_list, i, title_list)
 
     def make_comboboxes(self, file_list, i, title_list):

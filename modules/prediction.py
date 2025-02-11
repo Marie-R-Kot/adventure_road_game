@@ -4,7 +4,10 @@ challenge or not.
 """
 
 from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
 from modules.data_simulation import InitialData
+
+# from data_simulation import InitialData
 
 
 class ModelWork:
@@ -13,35 +16,43 @@ class ModelWork:
 
     def __init__(self):
         self.data = InitialData()
+        self.model = CatBoostClassifier()
+        self.model.load_model("catboost_model.bin")
         self.model = XGBClassifier()
         self.model.load_model("xgboost_model.json")
 
-    def get_data_from_tables(self, first, second, third, challenge):
+    def get_data_from_tables(self, first, second, third, challenge, skill):
         f_c = self.data.return_row("first", first)
         s_c = self.data.return_row("second", second)
         t_c = self.data.return_row("third", third)
         chal = self.data.return_row("challenge", challenge)
+        sk = self.data.return_row("skill", skill)
 
-        return (f_c, s_c, t_c, chal)
+        return (f_c, s_c, t_c, chal, sk)
 
     def get_data_ready(self, data_list):
-        f_c, s_c, t_c, chal = self.get_data_from_tables(
-            data_list[0], data_list[1], data_list[2], data_list[4]
+        f_c, s_c, t_c, chal, sk = self.get_data_from_tables(
+            data_list[0], data_list[1], data_list[2], data_list[4], data_list[5]
         )
 
         df = f_c.merge(s_c, how="cross")
         df = df.merge(t_c, how="cross")
         df = df.merge(chal, how="cross")
+        df = df.merge(sk, how="cross")
         df["Опыт"] = int(data_list[3])
-        drops = ["Испытание", "Происхождение", "Стремление", "Судьба"]
+        drops = [
+            "Испытание",
+            "Происхождение",
+            "Стремление",
+            "Судьба",
+        ]  # , "Способность"]
         df = df.drop(drops, axis=1)
 
         return df
 
     def predict_target(self, data_list):
         ready_data = self.get_data_ready(data_list)
-
-        return self.model.predict(ready_data[self.model.feature_names_in_])
+        return self.model.predict(ready_data[self.model.feature_names_in_])  # _in_])
 
 
 if __name__ == "__main__":
@@ -53,16 +64,11 @@ if __name__ == "__main__":
             "Коварный злодей",
             1,
             "Отправиться на поиски еды",
+            "Ловкость",
         ]
     )
     print(answer)
     answer = model.predict_target(
-        [
-            "Охотник",
-            "Сорвиголова",
-            "Карающая длань",
-            1,
-            "Украсть, чтобы выжить",
-        ]
+        ["Охотник", "Сорвиголова", "Карающая длань", 1, "Украсть, чтобы выжить", "Сила"]
     )
     print(answer)

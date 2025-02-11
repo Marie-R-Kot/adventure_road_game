@@ -3,6 +3,7 @@ Module provides classes to create player, turn and dataset with its combination
 One player created by combining his three card and his experience points. We have 2016 possible combination
 One turn created by combining one player with some challenge from challenges list(31 in total)
 """
+
 import os
 import pandas as pd
 from math import comb
@@ -15,25 +16,28 @@ data_dir = os.path.join(os.getcwd(), "data")
 @dataclass
 class Player:
     """Class contains function to create one player and return his id"""
+
     first_card: pd.Series
     second_card: pd.Series
     third_card: pd.Series
     experience: int
+    ability: str
 
     def define_player(self, player_id: int) -> Dict:
         """Define a player dictionary based on card attributes."""
         return {
             "Игрок": player_id,
             "Происхождение": self.first_card.Происхождение,  # Use dot notation
-            "Руна_1": self.first_card.Руна_1,                # Use dot notation
-            "Руна_2": self.first_card.Руна_2,                # Use dot notation
-            "Стремление": self.second_card.Стремление,       # Use dot notation
-            "Опция": self.second_card.Опция,                 # Use dot notation
-            "Судьба": self.third_card.Судьба,                # Use dot notation
-            "Цель_1": self.third_card.Цель_1,                # Use dot notation
-            "Цель_2": self.third_card.Цель_2,                # Use dot notation
-            "Цель_3": self.third_card.Цель_3,                # Use dot notation
+            "Руна_1": self.first_card.Руна_1,  # Use dot notation
+            "Руна_2": self.first_card.Руна_2,  # Use dot notation
+            "Стремление": self.second_card.Стремление,  # Use dot notation
+            "Опция": self.second_card.Опция,  # Use dot notation
+            "Судьба": self.third_card.Судьба,  # Use dot notation
+            "Цель_1": self.third_card.Цель_1,  # Use dot notation
+            "Цель_2": self.third_card.Цель_2,  # Use dot notation
+            "Цель_3": self.third_card.Цель_3,  # Use dot notation
             "Опыт": self.experience,
+            "Способность": self.ability,
         }
 
     def return_player(self, player_id: int) -> Dict:
@@ -49,10 +53,12 @@ class Turn:
     player: Dict
     challenge: Dict
 
-    def count_rune_probability(self, main: int, extra: int, threshold: int) -> float:
+    def count_rune_probability(
+        self, main: int, extra: int, dark: int, threshold: int
+    ) -> float:
         """Calculate the probability of meeting the rune threshold."""
         n1 = 3  # Runes that can be 0 or 1
-        n2 = main + extra  # Runes that can be 1 or 2
+        n2 = main + extra + dark  # Runes that can be 1 or 2
 
         # Calculate probabilities for the first group of runes (0 or 1)
         prob1 = {k1: comb(n1, k1) * (0.5**n1) for k1 in range(n1 + 1)}
@@ -71,19 +77,25 @@ class Turn:
         """Simulate whether the player should attempt the challenge."""
         main_rune = sum(
             1
-            for rune in [self.player["Руна_1"], self.player["Руна_2"]]
+            for rune in [
+                self.player["Руна_1"],
+                self.player["Руна_2"],
+                self.player["Способность"],
+            ]
             if rune
             in [self.challenge["Основная руна"], self.challenge["Дополнительная руна"]]
         )
 
+        dark_rune = int(self.player["Опыт"] > 0)
+
         extra_rune = int(
-            self.player["Опыт"] > 0
+            self.player["Опыт"] > 1
             and self.player["Опция"]
             in [self.challenge["Основная руна"], self.challenge["Дополнительная руна"]]
         )
 
         rune_prob = self.count_rune_probability(
-            main_rune, extra_rune, self.challenge["Сложность"]
+            main_rune, extra_rune, dark_rune, self.challenge["Сложность"]
         )
 
         if 0.3 <= rune_prob < 0.5 and self.challenge["Основная руна"] in [
@@ -92,7 +104,7 @@ class Turn:
             self.player["Цель_3"],
         ]:
             return 1
-        elif rune_prob >= 0.65:
+        elif rune_prob >= 0.5:
             return 1
         else:
             return 0
@@ -116,6 +128,7 @@ class InitialData:
         self.second_cards = pd.read_csv("data/second_card.csv", sep=";")
         self.third_cards = pd.read_csv("data/third_card.csv", sep=";")
         self.challenges = pd.read_csv("data/challenge.csv", sep=";")
+        self.skills = pd.read_csv("data/skill.csv", sep=";")
         self.players = self.define_all_players()
 
     def define_all_players(self) -> pd.DataFrame:
@@ -124,10 +137,23 @@ class InitialData:
         for first_card in self.first_cards.itertuples(index=False):
             for second_card in self.second_cards.itertuples(index=False):
                 for third_card in self.third_cards.itertuples(index=False):
-                    for experience in [0, 1]:
-                        player = Player(first_card, second_card, third_card, experience)
-                        players_list.append(player.return_player(player_id))
-                        player_id += 1
+                    cards = [
+                        first_card.Руна_1,
+                        first_card.Руна_2,
+                        third_card.Цель_1,
+                        third_card.Цель_2,
+                        third_card.Цель_3,
+                    ]
+                    if "Нет" not in cards:
+                        cards.append("Нет")
+
+                    for experience in range(3):
+                        for card in cards:
+                            player = Player(
+                                first_card, second_card, third_card, experience, card
+                            )
+                            players_list.append(player.return_player(player_id))
+                            player_id += 1
         # Convert the list of dictionaries into a DataFrame
         return pd.DataFrame(players_list)
 
@@ -150,6 +176,7 @@ class InitialData:
             "second": ("Стремление", self.second_cards),
             "third": ("Судьба", self.third_cards),
             "challenge": ("Испытание", self.challenges),
+            "skill": ("Способность", self.skills),
         }
         features_cat = [
             "Руна_1",
@@ -160,14 +187,20 @@ class InitialData:
             "Цель_3",
             "Основная руна",
             "Дополнительная руна",
+            "Способность",
         ]
 
         col_name, cards = card_map[card_type]
-        dummies = (
-            cards[[col_name, "Сложность"]]
-            if card_type == "challenge"
-            else cards[[col_name]]
-        )
+        if card_type == "challenge":
+            dummies = cards[[col_name, "Сложность"]]
+        elif card_type == "skill":
+            dummies_d = pd.get_dummies(
+                cards, prefix=col_name, drop_first=True, dtype=int
+            )
+            dummies = pd.concat([cards, dummies_d], axis=1)
+            return dummies[dummies[col_name] == row_name]
+        else:
+            dummies = cards[[col_name]]
 
         for feature in features_cat:
             if feature in cards.columns:
