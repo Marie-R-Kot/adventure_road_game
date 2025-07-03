@@ -27,15 +27,15 @@ class Player:
         """Define a player dictionary based on card attributes."""
         return {
             "Игрок": player_id,
-            "Происхождение": self.first_card.Происхождение,  # Use dot notation
-            "Руна_1": self.first_card.Руна_1,  # Use dot notation
-            "Руна_2": self.first_card.Руна_2,  # Use dot notation
-            "Стремление": self.second_card.Стремление,  # Use dot notation
-            "Опция": self.second_card.Опция,  # Use dot notation
-            "Судьба": self.third_card.Судьба,  # Use dot notation
-            "Цель_1": self.third_card.Цель_1,  # Use dot notation
-            "Цель_2": self.third_card.Цель_2,  # Use dot notation
-            "Цель_3": self.third_card.Цель_3,  # Use dot notation
+            "Происхождение": self.first_card.Происхождение,  
+            "Руна_1": self.first_card.Руна_1,  
+            "Руна_2": self.first_card.Руна_2,  
+            "Стремление": self.second_card.Стремление, 
+            "Опция": self.second_card.Опция,  
+            "Судьба": self.third_card.Судьба,  
+            "Цель_1": self.third_card.Цель_1,  
+            "Цель_2": self.third_card.Цель_2,  
+            "Цель_3": self.third_card.Цель_3,  
             "Опыт": self.experience,
             "Способность": self.ability,
         }

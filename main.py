@@ -35,7 +35,7 @@ class Application:
         # and where it is placed
         self.window.geometry("%dx%d+%d+%d" % (w, h, x, y))
 
-        self.window.title("Adventure road game - challenge")
+        self.window.title("Adventure road game helper")
 
         self.Font = font.Font(family="Arial", size=12)
 
@@ -60,7 +60,7 @@ class Application:
         self.create_choices()
 
         self.btn = tk.Button(
-            text="Получить предсказание",
+            text="Получить подсказку",
             command=lambda: self.start(),
             font=self.Font,
             height=5,
