@@ -16,8 +16,8 @@ class ModelWork:
 
     def __init__(self):
         self.data = InitialData()
-        self.model = CatBoostClassifier()
-        self.model.load_model("catboost_model.bin")
+        # self.model = CatBoostClassifier()
+        # self.model.load_model("catboost_model.bin")
         self.model = XGBClassifier()
         self.model.load_model("xgboost_model.json")
 
@@ -31,15 +31,21 @@ class ModelWork:
         return (f_c, s_c, t_c, chal, sk)
 
     def get_data_ready(self, data_list):
-        f_c, s_c, t_c, chal, sk = self.get_data_from_tables(
-            data_list[0], data_list[1], data_list[2], data_list[4], data_list[5]
-        )
+        # Old version of interface
+        # f_c, s_c, t_c, chal, sk = self.get_data_from_tables(
+        #     data_list[0], data_list[1], data_list[2], data_list[4], data_list[5]
+        # )
 
+        cards_name, exp, skill_check, dark_check = data_list
+        f_c, s_c, t_c, chal, sk = self.get_data_from_tables(
+            cards_name[0], cards_name[1], cards_name[2], cards_name[3], cards_name[4]
+        )
+        
         df = f_c.merge(s_c, how="cross")
         df = df.merge(t_c, how="cross")
         df = df.merge(chal, how="cross")
         df = df.merge(sk, how="cross")
-        df["Опыт"] = int(data_list[3])
+        df["Опыт"] = exp
         drops = [
             "Испытание",
             "Происхождение",

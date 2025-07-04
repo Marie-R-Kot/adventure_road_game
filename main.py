@@ -1,150 +1,242 @@
-'''Provides interface to get prediction from model if it worth to take choosed challenge 
-or not. So choose your card name, experience points, challenge and get an advice
-'''
-import tkinter as tk
-from tkinter import ttk
-import textwrap
-import tkinter.font as font
+import flet as ft
+import pyautogui
 import pandas as pd
 from modules.prediction import ModelWork
 
 
-class Application:
-    '''Class contains fuctions to work with interactive window to choose cards and
-    get a prediction'''
-    # create window
-    def __init__(self):
+class Application(ft.Column):
+    
+    def __init__(self, page):
+        super().__init__() #??????
+            
+        self.text_style = ft.TextStyle(
+            size=16
+        )
+        self.page = page
+        self.column_width = int(self.page.width/3-150)
+        self.title_list = ["Происхождение", "Стремление", "Судьба", "Испытание", "Способность"]
+        self.variant = {}
 
+        self.drops = self.create_choices()
+        self.experience = self.set_experience()
+        self.check = self.create_check()
+        
+        self.columns = self.form_columns()
+        self.form_page()
+        print(self.drops[self.title_list[0]].value)
+        
+    def form_page(self):
+        
         with open("data/description.txt", "r", encoding="utf-8") as file:
-            self.desc = file.read()
-
-        self.window = tk.Tk()
-
-        w = 700  # width for the Tk root
-        h = 450  # height for the Tk root
-
-        # get screen width and height
-        ws = self.window.winfo_screenwidth()  # width of the screen
-        hs = self.window.winfo_screenheight()  # height of the screen
-
-        # calculate x and y coordinates for the Tk root window
-        x = (ws / 2) - (w / 2)
-        y = (hs / 2) - (h / 2)
-
-        # set the dimensions of the screen
-        # and where it is placed
-        self.window.geometry("%dx%d+%d+%d" % (w, h, x, y))
-
-        self.window.title("Adventure road game helper")
-
-        self.Font = font.Font(family="Arial", size=12)
-
-        self.description_label = tk.Label(
-            self.window,
-            text=textwrap.fill(self.desc),
-            font=font.Font(family="Arial", size=13),
+            desc = file.read()
+            
+        self.page.add(ft.Text(value=desc, size=20, text_align=ft.TextAlign.CENTER))
+        self.page.add(
+            ft.ResponsiveRow(
+                controls=[
+                    ft.Container(
+                        content=self.columns[0],
+                        col={"sm": 4, "md": 4, "lg": 4},
+                        padding=10
+                    ),
+                    ft.Container(
+                        content=self.columns[1],
+                        col={"sm": 4, "md": 4, "lg": 4},
+                        padding=10
+                    ),
+                    ft.Container(
+                        content=self.columns[2],
+                        col={"sm": 4, "md": 4, "lg": 4},
+                        padding=10
+                    )
+                ],
+                spacing=10
+            )
         )
-        self.window.columnconfigure((0), weight=1)
-        self.window.rowconfigure((0, 20), weight=1)
+       
+    def get_cards(self):
+        selected = []
+        for name in self.title_list:
+            selected.append(self.drops[name].value)
+        exp = int(self.experience[1].value)
+        skill_check = self.check[0].value
+        dark_check = self.check[1].value
+        
+        return (selected, exp, skill_check, dark_check)
+    
+    def get_answer(self):
+        model = ModelWork()
+        data_list = self.get_cards()
+        answer = model.predict_target(data_list)
 
-        self.description_label.grid(column=0, row=1, rowspan=1, sticky="s")
-        # self.window.rowconfigure((1,2), weight=3)
-        self.choice_form("first")
-
-    def choice_form(self, time="any"):
-        if time != "first":
-            self.clear_window()
-            self.window.columnconfigure((0), weight=1)
-            self.window.rowconfigure((0, 20), weight=1)
-
-        self.create_choices()
-
-        self.btn = tk.Button(
+        return "Риск стоит того" if answer[0] == 1 else "Это испытание того не стоит"
+    
+    def bs_content(self, text):
+        content = ft.Container(
+            ft.Column(
+                        [
+                            ft.Text(text, style=self.text_style),
+                            ft.ElevatedButton(
+                                "Попробовать еще раз",
+                                on_click=lambda _: self.page.close(self.bs)
+                                ),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        tight=True,
+                    ),
+                    padding=50,
+        )
+        
+        return content
+        
+    def show_answer(self, e):
+        self.bs.content = self.bs_content(self.get_answer())
+        self.bs.update()
+        self.page.open(self.bs)
+    
+    def _bs_dismissed(self, e):
+        # for name in self.title_list:
+        #     self.drops[name].value = None
+        
+        self.experience[1].value = 0
+        self.check[0].value = False
+        self.check[1].value = False
+        
+        self.page.update()
+            
+              
+    def create_button(self):
+        
+        self.bs = ft.BottomSheet(
+            content=self.bs_content('Ответ'),
+            open=False,
+            on_dismiss=self._bs_dismissed,
+        )
+        self.page.overlay.append(self.bs)
+        
+        b = ft.FilledButton(
             text="Получить подсказку",
-            command=lambda: self.start(),
-            font=self.Font,
-            height=5,
-            width=40,
-            wraplength=240,
-            justify="center",
-        )
-        self.btn.grid(column=0, row=20)
-
+            style=ft.ButtonStyle(
+                text_style=self.text_style
+                ),
+            on_click=self.show_answer
+            )
+        b1 = ft.Container(
+                    content=b,
+                    alignment=ft.alignment.center
+                )
+        return b1
+    
     def create_choices(self):
         file_list = [
             "first_card.csv",
             "second_card.csv",
             "third_card.csv",
-            "exp.csv",
             "challenge.csv",
             "skill.csv"
         ]
-        title_list = ["Происхождение", "Стремление", "Судьба", "Опыт", "Испытание", "Способность"]
-        self.var_list = []
-        for i in range(len(title_list)):
-            self.make_comboboxes(file_list, i, title_list)
-
-    def make_comboboxes(self, file_list, i, title_list):
-        self.choices = list(pd.read_csv('data/' + file_list[i], sep=";")[title_list[i]])
-
-        self.var_list.append(tk.StringVar())
-
-        self.label = ttk.Label(self.window, text=title_list[i])
-        self.label.grid(column=0, row=2 * (i + 2), sticky="s")
-        self.dropdown = ttk.Combobox(
-            self.window,
-            textvariable=self.var_list[i],
-            values=self.choices,
-            width=40,
-            state="readonly",
+        drop_dict = {}
+        for i in range(len(self.title_list)):
+            drop_dict[self.title_list[i]] = ft.Dropdown(
+                border=ft.InputBorder.NONE,
+                enable_filter=False,
+                editable=False,
+                leading_icon=ft.Icons.SEARCH,
+                label=self.title_list[i],
+                width=self.column_width,
+                options=self.get_options(file_list[i], self.title_list[i])
+            )
+        return drop_dict
+            
+            
+    def get_options(self, file, title):
+        options = []
+        choices = list(pd.read_csv('data/' + file, sep=";")[title])
+        for choice in choices:
+            options.append(
+                    ft.DropdownOption(choice)
+                )
+        return options
+    
+    def set_experience(self):
+        
+        exp_text = ft.Text(
+            value='Количество очков опыта',
+            size=16,
+            text_align=ft.MainAxisAlignment.CENTER
         )
-        self.dropdown.grid(column=0, row=2 * i + 5, sticky="s")
-
-    def get_model_answer(self):
-        model = ModelWork()
-        card_list = []
-        card_list.extend(v.get() for v in self.var_list)
-        answer = model.predict_target(card_list)
-
-        return "Риск стоит того" if answer[0] == 1 else "Это испытание того не стоит"
-
-    def answer_form(self, answer_txt):
-        self.clear_window()
-        self.description_label = tk.Label(
-            self.window,
-            text=textwrap.fill(str(answer_txt)),
-            font=font.Font(family="Arial", size=13),
+        
+        exp_slider = ft.Slider(
+            min=0,
+            max=3,
+            divisions=3,
+            value=0,
+            label="{value}",
+            width=self.column_width,
         )
-        self.window.columnconfigure((0), weight=1)
-        self.window.rowconfigure((0, 4), weight=1)
+        
+        return (exp_text, exp_slider)
+    
+    def create_check(self):
+        
+        check_ability = ft.Checkbox(label="Использовать опыт для \nдопонительной руны способности",
+                                    label_style=self.text_style,
+                                    value=False)
+        check_dark = ft.Checkbox(label="Использовать опыт для \nтемной руны",
+                                 label_style=self.text_style,
+                                 value=False)
 
-        self.description_label.grid(column=0, row=1, sticky="s")
+        return (check_ability, check_dark)
 
-        self.btn = tk.Button(
-            text="Попробовать еще раз",
-            command=lambda: self.choice_form("any"),
-            font=self.Font,
-            height=5,
-            width=40,
-            wraplength=240,
-            justify="center",
-        )
-        self.btn.grid(column=0, row=3)
+    def form_columns(self):
+        
+        first_col = ft.Column(
+                        [self.drops[self.title_list[0]], 
+                         self.drops[self.title_list[1]], 
+                         self.drops[self.title_list[2]]],
+                        alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                    )
+        
+        second_col = ft.Column(
+                        [ft.Divider(color=ft.Colors.TRANSPARENT),
+                         self.experience[0], 
+                         self.experience[1], 
+                         self.drops[self.title_list[3]],
+                         self.create_button()],
+                        alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                    )
+        
+        third_col =  ft.Column(
+                        [self.drops[self.title_list[4]], self.check[0], self.check[1]],
+                        alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                    )
+        
+        return (first_col, second_col, third_col)
+    
+    
+def main(page: ft.Page):
+    
+    # get screen width and height
+    screen_width, screen_height = pyautogui.size()  # width and height of the screen
 
-    def start(self):
-        self.clear_window()
-        # self.var.get()
-        answer_txt = self.get_model_answer()
-        self.answer_form(answer_txt)
+    # Set the size of our page
+    window_width = int(screen_width * 0.5)  
+    window_height = int(screen_height * 0.5)  
 
-    def clear_window(self):
-        # Get all widgets in the window
-        for widget in self.window.winfo_children():
-            widget.destroy()
+    # set the dimensions of the screen
+    # and where it is placed
+    page.window.width = window_width
+    page.window.height = window_height
+        
+    page.title = 'Adventure road challenge helper'
+    #page.dark_theme = ft.Theme(color_scheme_seed=ft.Colors.BLUE)
+    page.padding = 20
+    page.update()
 
-    def run(self):
-        self.window.mainloop()
+    # create application instance
+    app = Application(page)
 
+    # add application's root control to the page
+    page.add(app)
 
-app = Application()
-app.run()
+ft.app(main)
