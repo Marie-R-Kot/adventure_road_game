@@ -46,6 +46,8 @@ class ModelWork:
         df = df.merge(chal, how="cross")
         df = df.merge(sk, how="cross")
         df["Опыт"] = exp
+        df['Исп. доп. руны_True'] = 1 if skill_check is True else 0
+        df["Исп. руны тьмы_True"]  = 1 if dark_check is True else 0
         drops = [
             "Испытание",
             "Происхождение",
@@ -65,16 +67,27 @@ if __name__ == "__main__":
     model = ModelWork()
     answer = model.predict_target(
         [
-            "Фермер",
+            ["Фермер",
             "Ученик мастера",
             "Коварный злодей",
-            1,
             "Отправиться на поиски еды",
-            "Ловкость",
+            "Ловкость"],
+            1,
+            False,
+            True
         ]
     )
     print(answer)
     answer = model.predict_target(
-        ["Охотник", "Сорвиголова", "Карающая длань", 1, "Украсть, чтобы выжить", "Сила"]
+        [
+            ["Охотник",
+            "Сорвиголова",
+            "Карающая длань",
+            "Украсть, чтобы выжить",
+            "Сила"],
+            3,
+            False,
+            True
+        ]
     )
     print(answer)

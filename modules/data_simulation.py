@@ -1,6 +1,7 @@
 """
-Module provides classes to create player, turn and dataset with its combination
-One player created by combining his three card and his experience points. We have 2016 possible combination
+Module provides classes to create player's turn and dataset with its combination
+One player created by combining his three card, additional skill(if exists)
+and his experience points. We have 19552 possible combination
 One turn created by combining one player with some challenge from challenges list(31 in total)
 """
 
@@ -8,6 +9,7 @@ import os
 import pandas as pd
 from math import comb
 from dataclasses import dataclass
+import random
 from typing import Dict
 
 data_dir = os.path.join(os.getcwd(), "data")
@@ -21,7 +23,7 @@ class Player:
     second_card: pd.Series
     third_card: pd.Series
     experience: int
-    ability: str
+    skill: str
 
     def define_player(self, player_id: int) -> Dict:
         """Define a player dictionary based on card attributes."""
@@ -37,7 +39,7 @@ class Player:
             "Цель_2": self.third_card.Цель_2,  
             "Цель_3": self.third_card.Цель_3,  
             "Опыт": self.experience,
-            "Способность": self.ability,
+            "Способность": self.skill,
         }
 
     def return_player(self, player_id: int) -> Dict:
@@ -47,11 +49,14 @@ class Player:
 
 @dataclass
 class Turn:
-    """Class contains function to create one turn - combine player, challenge and simulate the result of this turn
+    """Class contains function to create one turn - combine player, challenge and simulate 
+    the result of this turn
     - which is actually advice is it worth to take this challenge or not"""
 
     player: Dict
     challenge: Dict
+    extra_check: bool
+    dark_check: bool
 
     def count_rune_probability(
         self, main: int, extra: int, dark: int, threshold: int
@@ -86,12 +91,13 @@ class Turn:
             in [self.challenge["Основная руна"], self.challenge["Дополнительная руна"]]
         )
 
-        dark_rune = int(self.player["Опыт"] > 0)
+        dark_rune = int(self.player["Опыт"] > 0 and self.dark_check is True)
 
         extra_rune = int(
-            self.player["Опыт"] > 1
+            self.player["Опыт"] > 0
             and self.player["Опция"]
             in [self.challenge["Основная руна"], self.challenge["Дополнительная руна"]]
+            and self.extra_check is True
         )
 
         rune_prob = self.count_rune_probability(
@@ -114,9 +120,14 @@ class Turn:
         if if_target:
             self.challenge["Стоит ли пробовать"] = self.simulate_turn()
 
-        return pd.DataFrame([self.player]).merge(
-            pd.DataFrame([self.challenge]), how="cross"
-        )
+        df = pd.DataFrame([self.player]).merge(pd.DataFrame([self.extra_check], columns=["Исп. доп. руны"]), how="cross")
+        df = df.merge(pd.DataFrame([self.dark_check], columns=["Исп. руны тьмы"]), how="cross")
+        df = df.merge(pd.DataFrame([self.challenge]), how="cross")
+        
+        return df
+        # return pd.DataFrame([self.player]).merge(
+        #     pd.DataFrame([self.challenge]), how="cross"
+        # )
 
 
 class InitialData:
@@ -131,6 +142,17 @@ class InitialData:
         self.skills = pd.read_csv("data/skill.csv", sep=";")
         self.players = self.define_all_players()
 
+    def _runes_check(self, exp, extra, dark):
+        if exp > 1:
+            return (extra, dark)
+        elif exp == 0:
+            return (False, False)
+        else:
+            if False in [extra, dark]:
+                return (extra, dark)
+            else:
+                return random.choice([(False, True), (True, False)])
+    
     def define_all_players(self) -> pd.DataFrame:
         players_list = []
         player_id = 1
@@ -140,6 +162,7 @@ class InitialData:
                     cards = [
                         first_card.Руна_1,
                         first_card.Руна_2,
+                        second_card.Опция,
                         third_card.Цель_1,
                         third_card.Цель_2,
                         third_card.Цель_3,
@@ -147,8 +170,8 @@ class InitialData:
                     if "Нет" not in cards:
                         cards.append("Нет")
 
-                    for experience in range(3):
-                        for card in cards:
+                    for experience in range(4):
+                        for card in set(cards):
                             player = Player(
                                 first_card, second_card, third_card, experience, card
                             )
@@ -164,7 +187,10 @@ class InitialData:
         for _ in range(count):
             player = self.players.sample(1).iloc[0].to_dict()
             challenge = self.challenges.sample(1).iloc[0].to_dict()
-            turn = Turn(player, challenge)
+            extra_check = random.choice([True, False])
+            dark_check = random.choice([True, False])
+            extra_check, dark_check = self._runes_check(player["Опыт"], extra_check, dark_check)
+            turn = Turn(player, challenge, extra_check, dark_check)
             turns_list.append(turn.return_turn(if_target))
 
         return pd.concat(turns_list, ignore_index=True)

@@ -7,7 +7,7 @@ from modules.prediction import ModelWork
 class Application(ft.Column):
     
     def __init__(self, page):
-        super().__init__() #??????
+        super().__init__()
             
         self.text_style = ft.TextStyle(
             size=16
@@ -26,7 +26,7 @@ class Application(ft.Column):
         print(self.drops[self.title_list[0]].value)
         
     def form_page(self):
-        
+                
         with open("data/description.txt", "r", encoding="utf-8") as file:
             desc = file.read()
             
@@ -53,7 +53,25 @@ class Application(ft.Column):
                 spacing=10
             )
         )
-       
+        self.form_banner()
+
+            
+    def form_banner(self):
+        self.banner = ft.Banner(
+            bgcolor=ft.Colors.DEEP_PURPLE_ACCENT_200,
+            leading=ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, color=ft.Colors.PURPLE, size=40),
+            content=ft.Text(
+                value="Ой, кажется, вы забыли указать свои карты или карту испытания. Проверьте все и попробуйте еще раз",
+            ),
+            actions=[
+                ft.TextButton(
+                    text="Спасибо",
+                    style=ft.ButtonStyle(text_style=self.text_style),
+                    on_click=lambda e: self.page.close(self.banner)
+                ),
+            ],
+        )
+           
     def get_cards(self):
         selected = []
         for name in self.title_list:
@@ -67,7 +85,10 @@ class Application(ft.Column):
     def get_answer(self):
         model = ModelWork()
         data_list = self.get_cards()
-        answer = model.predict_target(data_list)
+        if None in data_list[0]:
+            return "Error"
+        else:
+            answer = model.predict_target(data_list)
 
         return "Риск стоит того" if answer[0] == 1 else "Это испытание того не стоит"
     
@@ -90,15 +111,18 @@ class Application(ft.Column):
         return content
         
     def show_answer(self, e):
-        self.bs.content = self.bs_content(self.get_answer())
-        self.bs.update()
-        self.page.open(self.bs)
+        answer = self.get_answer()
+        if answer == "Error":
+            self.page.open(self.banner)
+        else:
+            self.bs.content = self.bs_content(self.get_answer())
+            self.bs.update()
+            self.page.open(self.bs)
     
     def _bs_dismissed(self, e):
         # for name in self.title_list:
         #     self.drops[name].value = None
-        
-        self.experience[1].value = 0
+        # self.experience[1].value = 0
         self.check[0].value = False
         self.check[1].value = False
         
@@ -188,6 +212,7 @@ class Application(ft.Column):
 
         return (check_ability, check_dark)
 
+        
     def form_columns(self):
         
         first_col = ft.Column(
@@ -229,7 +254,7 @@ def main(page: ft.Page):
     page.window.height = window_height
         
     page.title = 'Adventure road challenge helper'
-    #page.dark_theme = ft.Theme(color_scheme_seed=ft.Colors.BLUE)
+    page.dark_theme = ft.Theme(color_scheme_seed=ft.Colors.DEEP_PURPLE_100)
     page.padding = 20
     page.update()
 
