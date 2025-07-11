@@ -77,8 +77,8 @@
 ### Интерфейс
 Файл `main.py` содержит небольшой UI-интерфейс с выбором карт игрока, очков опыта и предполагаемого испытания, а так же форму вывода предсказания модели:
 
-![](/assets/images/flet_interface.png)
-![](/assets/images/answer_interface.png)
+![](/assets/images/flet_interface.PNG)
+![](/assets/images/answer_interface.PNG)
 
 
 ### Идеи для улучшения
